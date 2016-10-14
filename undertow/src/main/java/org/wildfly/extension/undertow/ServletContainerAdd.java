@@ -76,6 +76,7 @@ final class ServletContainerAdd extends AbstractBoottimeAddStepHandler {
         final boolean allowNonStandardWrappers = ServletContainerDefinition.ALLOW_NON_STANDARD_WRAPPERS.resolveModelAttribute(context, model).asBoolean();
         final boolean proactiveAuth = ServletContainerDefinition.PROACTIVE_AUTHENTICATION.resolveModelAttribute(context, model).asBoolean();
         final String bufferCache = ServletContainerDefinition.DEFAULT_BUFFER_CACHE.resolveModelAttribute(context, model).asString();
+        final boolean disableFileWatchService = ServletContainerDefinition.DISABLE_FILE_WATCH_SERVICE.resolveModelAttribute(context, model).asBoolean();
 
         JSPConfig jspConfig = JspDefinition.INSTANCE.getConfig(context, fullModel.get(JspDefinition.INSTANCE.getPathElement().getKeyValuePair()));
 
@@ -99,7 +100,7 @@ final class ServletContainerAdd extends AbstractBoottimeAddStepHandler {
 
         final int sessionTimeout = ServletContainerDefinition.DEFAULT_SESSION_TIMEOUT.resolveModelAttribute(context, model).asInt();
 
-        WebsocketsDefinition.WebSocketInfo info = WebsocketsDefinition.INSTANCE.getConfig(context, model);
+        WebsocketsDefinition.WebSocketInfo webSocketInfo = WebsocketsDefinition.INSTANCE.getConfig(context, fullModel.get(WebsocketsDefinition.INSTANCE.getPathElement().getKeyValuePair()));
 
         final Map<String, String> mimeMappings = new HashMap<>();
         if (fullModel.hasDefined(Constants.MIME_MAPPING)) {
@@ -130,9 +131,10 @@ final class ServletContainerAdd extends AbstractBoottimeAddStepHandler {
                 ignoreFlush,
                 eagerFilterInit,
                 sessionTimeout,
-                disableCachingForSecuredPages, info != null, info != null && info.isDispatchToWorker(),
+                disableCachingForSecuredPages, webSocketInfo != null, webSocketInfo != null && webSocketInfo.isDispatchToWorker(),
+                webSocketInfo != null && webSocketInfo.isPerMessageDeflate(), webSocketInfo == null ? -1 : webSocketInfo.getDeflaterLevel(),
                 mimeMappings,
-                welcomeFiles, directoryListingEnabled, proactiveAuth, sessionIdLength, authenticationMechanisms, maxSessions, crawlerSessionManagerConfig);
+                welcomeFiles, directoryListingEnabled, proactiveAuth, sessionIdLength, authenticationMechanisms, maxSessions, crawlerSessionManagerConfig, disableFileWatchService);
 
         final ServiceTarget target = context.getServiceTarget();
         final ServiceBuilder<ServletContainerService> builder = target.addService(UndertowService.SERVLET_CONTAINER.append(name), container);
@@ -142,9 +144,9 @@ final class ServletContainerAdd extends AbstractBoottimeAddStepHandler {
         if(persistentSessions) {
             builder.addDependency(AbstractPersistentSessionManager.SERVICE_NAME, SessionPersistenceManager.class, container.getSessionPersistenceManagerInjectedValue());
         }
-        if(info != null) {
-            builder.addDependency(IOServices.WORKER.append(info.getWorker()), XnioWorker.class, container.getWebsocketsWorker());
-            builder.addDependency(IOServices.BUFFER_POOL.append(info.getBufferPool()), Pool.class, (InjectedValue) container.getWebsocketsBufferPool());
+        if(webSocketInfo != null) {
+            builder.addDependency(IOServices.WORKER.append(webSocketInfo.getWorker()), XnioWorker.class, container.getWebsocketsWorker());
+            builder.addDependency(IOServices.BUFFER_POOL.append(webSocketInfo.getBufferPool()), Pool.class, (InjectedValue) container.getWebsocketsBufferPool());
         }
 
         builder.setInitialMode(ServiceController.Mode.ON_DEMAND)

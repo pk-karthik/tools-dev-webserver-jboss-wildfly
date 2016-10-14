@@ -25,6 +25,7 @@ package org.jboss.as.clustering.infinispan.subsystem;
 import java.util.Set;
 
 import org.jboss.as.clustering.controller.AddStepHandler;
+import org.jboss.as.clustering.controller.DefaultableCapabilityReference;
 import org.jboss.as.clustering.controller.RemoveStepHandler;
 import org.jboss.as.clustering.controller.ResourceDescriptor;
 import org.jboss.as.clustering.controller.ResourceServiceHandler;
@@ -37,10 +38,12 @@ import org.jboss.as.clustering.infinispan.InfinispanLogger;
 import org.jboss.as.clustering.jgroups.subsystem.ChannelResourceDefinition;
 import org.jboss.as.clustering.jgroups.subsystem.JGroupsSubsystemResourceDefinition;
 import org.jboss.as.controller.AttributeDefinition;
+import org.jboss.as.controller.CapabilityReferenceRecorder;
 import org.jboss.as.controller.ModelVersion;
 import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
+import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.client.helpers.MeasurementUnit;
 import org.jboss.as.controller.registry.AttributeAccess;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
@@ -49,6 +52,7 @@ import org.jboss.as.controller.transform.TransformationContext;
 import org.jboss.as.controller.transform.description.ResourceTransformationDescriptionBuilder;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
+import org.wildfly.clustering.jgroups.spi.JGroupsRequirement;
 
 /**
  * Resource description for the addressable resource and its alias
@@ -63,11 +67,38 @@ public class JGroupsTransportResourceDefinition extends TransportResourceDefinit
     static final PathElement LEGACY_PATH = pathElement("TRANSPORT");
     static final PathElement PATH = pathElement("jgroups");
 
+    enum Capability implements org.jboss.as.clustering.controller.Capability {
+        TRANSPORT_CHANNEL_FACTORY("org.wildfly.clustering.infinispan.transport.channel-factory"),
+        ;
+        private final RuntimeCapability<Void> definition;
+
+        Capability(String name) {
+            this.definition = RuntimeCapability.Builder.of(name, true).build();
+        }
+
+        @Override
+        public RuntimeCapability<Void> getDefinition() {
+            return this.definition;
+        }
+
+        @Override
+        public RuntimeCapability<?> resolve(PathAddress address) {
+            return this.definition.fromBaseCapability(address.getParent().getLastElement().getValue());
+        }
+    }
+
     enum Attribute implements org.jboss.as.clustering.controller.Attribute {
-        CHANNEL("channel", ModelType.STRING, null),
+        CHANNEL("channel", ModelType.STRING, new DefaultableCapabilityReference(Capability.TRANSPORT_CHANNEL_FACTORY, JGroupsRequirement.CHANNEL_FACTORY)),
         LOCK_TIMEOUT("lock-timeout", ModelType.LONG, new ModelNode(240000L)),
         ;
         private final AttributeDefinition definition;
+
+        Attribute(String name, ModelType type, CapabilityReferenceRecorder reference) {
+            this.definition = createBuilder(name, type, null)
+                    .setAllowExpression(false)
+                    .setCapabilityReference(reference)
+                    .build();
+        }
 
         Attribute(String name, ModelType type, ModelNode defaultValue) {
             this.definition = createBuilder(name, type, defaultValue).build();
@@ -136,13 +167,13 @@ public class JGroupsTransportResourceDefinition extends TransportResourceDefinit
                     PathAddress subsystemAddress = rootAddress.append(JGroupsSubsystemResourceDefinition.PATH);
                     ModelNode subsystemModel = context.readResourceFromRoot(subsystemAddress).getModel();
                     String channelName = null;
-                    if (model.hasDefined(Attribute.CHANNEL.getDefinition().getName())) {
-                        ModelNode channel = model.get(Attribute.CHANNEL.getDefinition().getName());
+                    if (model.hasDefined(Attribute.CHANNEL.getName())) {
+                        ModelNode channel = model.get(Attribute.CHANNEL.getName());
                         if (channel.getType() == ModelType.STRING) {
                             channelName = channel.asString();
                         }
-                    } else if (subsystemModel.hasDefined(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_CHANNEL.getDefinition().getName())) {
-                        ModelNode defaultChannel = subsystemModel.get(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_CHANNEL.getDefinition().getName());
+                    } else if (subsystemModel.hasDefined(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_CHANNEL.getName())) {
+                        ModelNode defaultChannel = subsystemModel.get(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_CHANNEL.getName());
                         if (defaultChannel.getType() == ModelType.STRING) {
                             channelName = defaultChannel.asString();
                         }
@@ -152,13 +183,13 @@ public class JGroupsTransportResourceDefinition extends TransportResourceDefinit
                     PathAddress channelAddress = subsystemAddress.append(ChannelResourceDefinition.pathElement(channelName));
                     try {
                         ModelNode channel = context.readResourceFromRoot(channelAddress).getModel();
-                        if (channel.hasDefined(ChannelResourceDefinition.Attribute.STACK.getDefinition().getName())) {
-                            ModelNode stack = channel.get(ChannelResourceDefinition.Attribute.STACK.getDefinition().getName());
+                        if (channel.hasDefined(ChannelResourceDefinition.Attribute.STACK.getName())) {
+                            ModelNode stack = channel.get(ChannelResourceDefinition.Attribute.STACK.getName());
                             if (stack.getType() == ModelType.STRING) {
                                 stackName = stack.asString();
                             }
-                        } else if (subsystemModel.hasDefined(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_STACK.getDefinition().getName())) {
-                            ModelNode defaultStack = subsystemModel.get(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_STACK.getDefinition().getName());
+                        } else if (subsystemModel.hasDefined(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_STACK.getName())) {
+                            ModelNode defaultStack = subsystemModel.get(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_STACK.getName());
                             if (defaultStack.getType() == ModelType.STRING) {
                                 stackName = defaultStack.asString();
                             }
@@ -183,13 +214,13 @@ public class JGroupsTransportResourceDefinition extends TransportResourceDefinit
                         PathAddress subsystemAddress = rootAddress.append(JGroupsSubsystemResourceDefinition.PATH);
                         ModelNode subsystemModel = context.readResourceFromRoot(subsystemAddress).getModel();
                         String channelName = null;
-                        if (model.hasDefined(Attribute.CHANNEL.getDefinition().getName())) {
-                            ModelNode channel = model.get(Attribute.CHANNEL.getDefinition().getName());
+                        if (model.hasDefined(Attribute.CHANNEL.getName())) {
+                            ModelNode channel = model.get(Attribute.CHANNEL.getName());
                             if (channel.getType() == ModelType.STRING) {
                                 channelName = channel.asString();
                             }
-                        } else if (subsystemModel.hasDefined(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_CHANNEL.getDefinition().getName())) {
-                            ModelNode defaultChannel = subsystemModel.get(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_CHANNEL.getDefinition().getName());
+                        } else if (subsystemModel.hasDefined(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_CHANNEL.getName())) {
+                            ModelNode defaultChannel = subsystemModel.get(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_CHANNEL.getName());
                             if (defaultChannel.getType() == ModelType.STRING) {
                                 channelName = defaultChannel.asString();
                             }
@@ -198,13 +229,13 @@ public class JGroupsTransportResourceDefinition extends TransportResourceDefinit
                             PathAddress channelAddress = subsystemAddress.append(ChannelResourceDefinition.pathElement(channelName));
                             try {
                                 ModelNode channel = context.readResourceFromRoot(channelAddress).getModel();
-                                if (channel.hasDefined(ChannelResourceDefinition.Attribute.STACK.getDefinition().getName())) {
-                                    ModelNode stack = channel.get(ChannelResourceDefinition.Attribute.STACK.getDefinition().getName());
+                                if (channel.hasDefined(ChannelResourceDefinition.Attribute.STACK.getName())) {
+                                    ModelNode stack = channel.get(ChannelResourceDefinition.Attribute.STACK.getName());
                                     if (stack.getType() == ModelType.STRING) {
                                         value.set(stack.asString());
                                     }
-                                } else if (subsystemModel.hasDefined(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_STACK.getDefinition().getName())) {
-                                    ModelNode defaultStack = subsystemModel.get(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_STACK.getDefinition().getName());
+                                } else if (subsystemModel.hasDefined(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_STACK.getName())) {
+                                    ModelNode defaultStack = subsystemModel.get(JGroupsSubsystemResourceDefinition.Attribute.DEFAULT_STACK.getName());
                                     if (defaultStack.getType() == ModelType.STRING) {
                                         value.set(defaultStack.asString());
                                     }
@@ -237,6 +268,7 @@ public class JGroupsTransportResourceDefinition extends TransportResourceDefinit
                 .addAttributes(Attribute.class)
                 .addAttributes(ExecutorAttribute.class)
                 .addAttributes(DeprecatedAttribute.class)
+                .addCapabilities(Capability.class)
                 ;
         ResourceServiceHandler handler = new JGroupsTransportServiceHandler();
         new AddStepHandler(descriptor, handler).register(registration);

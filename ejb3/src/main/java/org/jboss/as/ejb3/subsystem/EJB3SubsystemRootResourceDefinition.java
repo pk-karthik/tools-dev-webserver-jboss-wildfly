@@ -67,7 +67,6 @@ import org.jboss.dmr.ModelType;
  * @author Brian Stansberry (c) 2011 Red Hat Inc.
  */
 public class EJB3SubsystemRootResourceDefinition extends SimpleResourceDefinition {
-
     static final SimpleAttributeDefinition DEFAULT_SLSB_INSTANCE_POOL =
             new SimpleAttributeDefinitionBuilder(EJB3SubsystemModel.DEFAULT_SLSB_INSTANCE_POOL, ModelType.STRING, true)
                     .setAllowExpression(true).build();
@@ -162,10 +161,19 @@ public class EJB3SubsystemRootResourceDefinition extends SimpleResourceDefinitio
                     .setDefaultValue(new ModelNode(true))
                     .build();
 
+    public static final SimpleAttributeDefinition ALLOW_EJB_NAME_REGEX =
+            new SimpleAttributeDefinitionBuilder(EJB3SubsystemModel.ALLOW_EJB_NAME_REGEX, ModelType.BOOLEAN, true)
+            .setDefaultValue(new ModelNode(false))
+            .setAllowExpression(true)
+            .build();
+
     public static final RuntimeCapability<Void> CLUSTERED_SINGLETON_CAPABILITY =  RuntimeCapability.Builder.of(
             "org.wildfly.ejb3.clustered.singleton", Void.class).build();
 
-    private static final EJBDefaultSecurityDomainProcessor defaultSecurityDomainDeploymentProcessor = new EJBDefaultSecurityDomainProcessor(null);
+    private static final ApplicationSecurityDomainDefinition APPLICATION_SECURITY_DOMAIN = ApplicationSecurityDomainDefinition.INSTANCE;
+    private static final IdentityResourceDefinition IDENTITY = IdentityResourceDefinition.INSTANCE;
+    private static final EJBDefaultSecurityDomainProcessor defaultSecurityDomainDeploymentProcessor = new EJBDefaultSecurityDomainProcessor(null,
+            APPLICATION_SECURITY_DOMAIN.getKnownSecurityDomainPredicate(), IDENTITY.getOutflowSecurityDomainsConfiguredSupplier());
     private static final MissingMethodPermissionsDenyAccessMergingProcessor missingMethodPermissionsDenyAccessMergingProcessor = new MissingMethodPermissionsDenyAccessMergingProcessor();
 
 
@@ -175,6 +183,7 @@ public class EJB3SubsystemRootResourceDefinition extends SimpleResourceDefinitio
     private static final ModelVersion VERSION_1_2_1 = ModelVersion.create(1, 2, 1);
     private static final ModelVersion VERSION_1_3_0 = ModelVersion.create(1, 3, 0);
     private static final ModelVersion VERSION_3_0_0 = ModelVersion.create(3, 0, 0);
+    private static final ModelVersion VERSION_4_0_0 = ModelVersion.create(4, 0, 0);
 
     EJB3SubsystemRootResourceDefinition(boolean registerRuntimeOnly, PathManager pathManager) {
         super(PathElement.pathElement(SUBSYSTEM, EJB3Extension.SUBSYSTEM_NAME),
@@ -201,7 +210,8 @@ public class EJB3SubsystemRootResourceDefinition extends SimpleResourceDefinitio
             DEFAULT_MISSING_METHOD_PERMISSIONS_DENY_ACCESS,
             DEFAULT_SFSB_PASSIVATION_DISABLED_CACHE,
             DISABLE_DEFAULT_EJB_PERMISSIONS,
-            LOG_EJB_EXCEPTIONS
+            LOG_EJB_EXCEPTIONS,
+            ALLOW_EJB_NAME_REGEX
     };
 
     @Override
@@ -220,6 +230,7 @@ public class EJB3SubsystemRootResourceDefinition extends SimpleResourceDefinitio
         resourceRegistration.registerReadWriteAttribute(PASS_BY_VALUE, null, EJBRemoteInvocationPassByValueWriteHandler.INSTANCE);
         resourceRegistration.registerReadWriteAttribute(DEFAULT_DISTINCT_NAME, null, EJBDefaultDistinctNameWriteHandler.INSTANCE);
         resourceRegistration.registerReadWriteAttribute(LOG_EJB_EXCEPTIONS, null, ExceptionLoggingWriteHandler.INSTANCE);
+        resourceRegistration.registerReadWriteAttribute(ALLOW_EJB_NAME_REGEX, null, EJBNameRegexWriteHandler.INSTANCE);
 
         final EJBDefaultSecurityDomainWriteHandler defaultSecurityDomainWriteHandler = new EJBDefaultSecurityDomainWriteHandler(DEFAULT_SECURITY_DOMAIN, defaultSecurityDomainDeploymentProcessor);
         resourceRegistration.registerReadWriteAttribute(DEFAULT_SECURITY_DOMAIN, null, defaultSecurityDomainWriteHandler);
@@ -292,12 +303,18 @@ public class EJB3SubsystemRootResourceDefinition extends SimpleResourceDefinitio
 
         // subsystem=ejb3/mdb-delivery-group=*
         subsystemRegistration.registerSubModel(MdbDeliveryGroupResourceDefinition.INSTANCE);
+
+        // subsystem=ejb3/application-security-domain=*
+        subsystemRegistration.registerSubModel(APPLICATION_SECURITY_DOMAIN);
+
+        subsystemRegistration.registerSubModel(IDENTITY);
     }
 
     static void registerTransformers(SubsystemRegistration subsystemRegistration) {
         registerTransformers_1_2_1(subsystemRegistration);
         registerTransformers_1_3_0(subsystemRegistration);
         registerTransformers_3_0_0(subsystemRegistration);
+        registerTransformers_4_0_0(subsystemRegistration);
     }
 
 
@@ -323,10 +340,16 @@ public class EJB3SubsystemRootResourceDefinition extends SimpleResourceDefinitio
         builder.getAttributeBuilder().setDiscard(new DiscardAttributeChecker.DiscardAttributeValueChecker(new ModelNode(false)), EJB3SubsystemRootResourceDefinition.DISABLE_DEFAULT_EJB_PERMISSIONS);
         //builder.getAttributeBuilder().setValueConverter(AttributeConverter.Factory.createHardCoded(new ModelNode("hornetq-ra"), true), EJB3SubsystemRootResourceDefinition.DEFAULT_RESOURCE_ADAPTER_NAME);
 
+
+        builder.getAttributeBuilder().setDiscard(new DiscardAttributeChecker.DiscardAttributeValueChecker(new ModelNode(false)), EJB3SubsystemRootResourceDefinition.ALLOW_EJB_NAME_REGEX);
+        builder.getAttributeBuilder().addRejectCheck(RejectAttributeChecker.DEFINED, EJB3SubsystemRootResourceDefinition.ALLOW_EJB_NAME_REGEX);
+
         PassivationStoreResourceDefinition.registerTransformers_1_2_1_and_1_3_0(builder);
         EJB3RemoteResourceDefinition.registerTransformers_1_2_0_and_1_3_0(builder);
         MdbDeliveryGroupResourceDefinition.registerTransformers_1_2_0_and_1_3_0(builder);
         StrictMaxPoolResourceDefinition.registerTransformers_1_2_0_and_1_3_0(builder);
+        ApplicationSecurityDomainDefinition.registerTransformers_1_2_0_and_1_3_0(builder);
+        IdentityResourceDefinition.registerTransformers_1_2_0_and_1_3_0(builder);
         builder.rejectChildResource(PathElement.pathElement(EJB3SubsystemModel.REMOTING_PROFILE));
         if (version.equals(VERSION_1_2_1)) {
             TimerServiceResourceDefinition.registerTransformers_1_2_0(builder);
@@ -340,10 +363,26 @@ public class EJB3SubsystemRootResourceDefinition extends SimpleResourceDefinitio
         final ResourceTransformationDescriptionBuilder builder = TransformationDescriptionBuilder.Factory.createSubsystemInstance();
         builder.getAttributeBuilder().setValueConverter(AttributeConverter.Factory.createHardCoded(new ModelNode("hornetq-ra"), true), EJB3SubsystemRootResourceDefinition.DEFAULT_RESOURCE_ADAPTER_NAME)
         .end();
+        builder.getAttributeBuilder().setDiscard(new DiscardAttributeChecker.DiscardAttributeValueChecker(new ModelNode(false)), EJB3SubsystemRootResourceDefinition.ALLOW_EJB_NAME_REGEX);
+        builder.getAttributeBuilder().addRejectCheck(RejectAttributeChecker.DEFINED, EJB3SubsystemRootResourceDefinition.ALLOW_EJB_NAME_REGEX);
         MdbDeliveryGroupResourceDefinition.registerTransformers_3_0(builder);
         EJB3RemoteResourceDefinition.registerTransformers_3_0(builder);
         StrictMaxPoolResourceDefinition.registerTransformers_3_0_0(builder);
+        ApplicationSecurityDomainDefinition.registerTransformers_3_0_0(builder);
+        IdentityResourceDefinition.registerTransformers_3_0_0(builder);
         TransformationDescription.Tools.register(builder.build(), subsystemRegistration, VERSION_3_0_0);
+    }
+
+    private static void registerTransformers_4_0_0(SubsystemRegistration subsystemRegistration) {
+        final ResourceTransformationDescriptionBuilder builder = TransformationDescriptionBuilder.Factory.createSubsystemInstance();
+
+        ApplicationSecurityDomainDefinition.registerTransformers_4_0(builder);
+        IdentityResourceDefinition.registerTransformers_4_0(builder);
+
+        builder.getAttributeBuilder().setDiscard(new DiscardAttributeChecker.DiscardAttributeValueChecker(new ModelNode(false)), EJB3SubsystemRootResourceDefinition.ALLOW_EJB_NAME_REGEX);
+        builder.getAttributeBuilder().addRejectCheck(RejectAttributeChecker.DEFINED, EJB3SubsystemRootResourceDefinition.ALLOW_EJB_NAME_REGEX);
+
+        TransformationDescription.Tools.register(builder.build(), subsystemRegistration, VERSION_4_0_0);
     }
 
     private static class EJB3ThreadFactoryResolver extends ThreadFactoryResolver.SimpleResolver {

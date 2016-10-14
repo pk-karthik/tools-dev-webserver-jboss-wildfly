@@ -24,10 +24,14 @@ package org.jboss.as.clustering.jgroups.subsystem;
 
 import static org.jboss.as.clustering.jgroups.subsystem.TransportResourceDefinition.Attribute.*;
 
+import java.util.EnumSet;
+import java.util.Optional;
+
 import org.jboss.as.clustering.controller.CommonUnaryRequirement;
 import org.jboss.as.clustering.dmr.ModelNodes;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
+import org.jboss.as.controller.PathAddress;
 import org.jboss.as.network.SocketBinding;
 import org.jboss.dmr.ModelNode;
 import org.jboss.msc.service.ServiceBuilder;
@@ -45,8 +49,8 @@ public class TransportConfigurationBuilder extends AbstractProtocolConfiguration
     private ValueDependency<SocketBinding> diagnosticsSocketBinding;
     private Topology topology = null;
 
-    public TransportConfigurationBuilder(String stackName, String name) {
-        super(stackName, name);
+    public TransportConfigurationBuilder(PathAddress address) {
+        super(address);
     }
 
     @Override
@@ -65,48 +69,45 @@ public class TransportConfigurationBuilder extends AbstractProtocolConfiguration
 
     @Override
     public Builder<TransportConfiguration> configure(OperationContext context, ModelNode transport) throws OperationFailedException {
-        final String machine = ModelNodes.asString(MACHINE.getDefinition().resolveModelAttribute(context, transport));
-        final String rack = ModelNodes.asString(RACK.getDefinition().resolveModelAttribute(context, transport));
-        final String site = ModelNodes.asString(SITE.getDefinition().resolveModelAttribute(context, transport));
-        if ((site != null) || (rack != null) || (machine != null)) {
+        Optional<String> machine = ModelNodes.optionalString(MACHINE.resolveModelAttribute(context, transport));
+        Optional<String> rack = ModelNodes.optionalString(RACK.resolveModelAttribute(context, transport));
+        Optional<String> site = ModelNodes.optionalString(SITE.resolveModelAttribute(context, transport));
+        if (site.isPresent() || rack.isPresent() || machine.isPresent()) {
             this.topology = new Topology() {
                 @Override
                 public String getMachine() {
-                    return machine;
+                    return machine.orElse(null);
                 }
 
                 @Override
                 public String getRack() {
-                    return rack;
+                    return rack.orElse(null);
                 }
 
                 @Override
                 public String getSite() {
-                    return site;
+                    return site.orElse(null);
                 }
             };
         }
 
-        String diagnosticsBinding = ModelNodes.asString(DIAGNOSTICS_SOCKET_BINDING.getDefinition().resolveModelAttribute(context, transport));
-        if (diagnosticsBinding != null) {
-            this.diagnosticsSocketBinding = new InjectedValueDependency<>(CommonUnaryRequirement.SOCKET_BINDING.getServiceName(context, diagnosticsBinding), SocketBinding.class);
-        }
+        this.diagnosticsSocketBinding = ModelNodes.optionalString(DIAGNOSTICS_SOCKET_BINDING.resolveModelAttribute(context, transport)).map(diagnosticsBinding -> new InjectedValueDependency<>(CommonUnaryRequirement.SOCKET_BINDING.getServiceName(context, diagnosticsBinding), SocketBinding.class)).orElse(null);
 
-        for (ThreadPoolResourceDefinition pool : ThreadPoolResourceDefinition.values()) {
+        for (ThreadPoolResourceDefinition pool : EnumSet.allOf(ThreadPoolResourceDefinition.class)) {
             String prefix = pool.getPrefix();
             ModelNode model = transport.get(pool.getPathElement().getKeyValuePair());
 
-            this.getProperties().put(prefix + ".min_threads", pool.getMinThreads().getDefinition().resolveModelAttribute(context, model).asString());
-            this.getProperties().put(prefix + ".max_threads", pool.getMaxThreads().getDefinition().resolveModelAttribute(context, model).asString());
+            this.getProperties().put(prefix + ".min_threads", pool.getMinThreads().resolveModelAttribute(context, model).asString());
+            this.getProperties().put(prefix + ".max_threads", pool.getMaxThreads().resolveModelAttribute(context, model).asString());
 
-            int queueSize = pool.getQueueLength().getDefinition().resolveModelAttribute(context, model).asInt();
+            int queueSize = pool.getQueueLength().resolveModelAttribute(context, model).asInt();
             if (pool != ThreadPoolResourceDefinition.TIMER) {
                 this.getProperties().put(prefix + ".queue_enabled", String.valueOf(queueSize > 0));
             }
             this.getProperties().put(prefix + ".queue_max_size", String.valueOf(queueSize));
 
             // keepalive_time in milliseconds
-            this.getProperties().put(prefix + ".keep_alive_time", pool.getKeepAliveTime().getDefinition().resolveModelAttribute(context, model).asString());
+            this.getProperties().put(prefix + ".keep_alive_time", pool.getKeepAliveTime().resolveModelAttribute(context, model).asString());
             this.getProperties().put(prefix + ".rejection_policy", "abort");
         }
 

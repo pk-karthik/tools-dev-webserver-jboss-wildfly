@@ -26,7 +26,7 @@
 <!--  See src/resources/configuration/ReadMe.txt for how the configuration assembly works -->
 <config>
     <extension-module>org.wildfly.extension.undertow</extension-module>
-    <subsystem xmlns="urn:jboss:domain:undertow:3.1">
+    <subsystem xmlns="urn:jboss:domain:undertow:4.0">
         <buffer-cache name="default" />
         <server name="default-server">
             <?AJP?>
@@ -38,7 +38,7 @@
                 <filter-ref name="x-powered-by-header"/>
             </host>
         </server>
-        <servlet-container name="default" >
+        <servlet-container name="default">
             <jsp-config/>
             <websockets/>
         </servlet-container>
@@ -49,10 +49,28 @@
             <response-header name="server-header" header-name="Server" header-value="WildFly/10"/>
             <response-header name="x-powered-by-header" header-name="X-Powered-By" header-value="Undertow/1"/>
         </filters>
+        <?ELYTRON?>
     </subsystem>
     <supplement name="ha">
         <replacement placeholder="AJP">
             <ajp-listener name="ajp" socket-binding="ajp" />
+        </replacement>
+    </supplement>
+    <supplement name="elytron">
+        <replacement placeholder="ELYTRON">
+            <application-security-domains>
+                <application-security-domain name="other" http-authentication-factory="application-http-authentication"/>
+            </application-security-domains>
+        </replacement>
+    </supplement>
+    <supplement name="ha-elytron">
+        <replacement placeholder="AJP">
+            <ajp-listener name="ajp" socket-binding="ajp" />
+        </replacement>
+        <replacement placeholder="ELYTRON">
+            <application-security-domains>
+                <application-security-domain name="other" http-authentication-factory="application-http-authentication"/>
+            </application-security-domains>
         </replacement>
     </supplement>
     <socket-binding name="http" port="${jboss.http.port:8080}"/>

@@ -21,6 +21,8 @@
  */
 package org.wildfly.extension.clustering.singleton;
 
+import java.util.Locale;
+
 import org.jboss.as.clustering.controller.Schema;
 
 /**
@@ -30,13 +32,14 @@ import org.jboss.as.clustering.controller.Schema;
 public enum SingletonSchema implements Schema<SingletonSchema> {
 
     VERSION_1_0(1, 0),
+    VERSION_2_0(2, 0),
     ;
     public static final SingletonSchema CURRENT = VERSION_1_0;
 
     private final int major;
     private final int minor;
 
-    private SingletonSchema(int major, int minor) {
+    SingletonSchema(int major, int minor) {
         this.major = major;
         this.minor = minor;
     }
@@ -53,6 +56,6 @@ public enum SingletonSchema implements Schema<SingletonSchema> {
 
     @Override
     public String getNamespaceUri() {
-        return String.format("urn:jboss:domain:singleton:%d.%d", this.major, this.minor);
+        return String.format(Locale.ROOT, "urn:jboss:domain:singleton:%d.%d", this.major, this.minor);
     }
 }

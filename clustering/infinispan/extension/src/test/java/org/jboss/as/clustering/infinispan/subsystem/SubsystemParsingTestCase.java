@@ -40,6 +40,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.wildfly.clustering.jgroups.spi.JGroupsRequirement;
 
 /**
  * Tests parsing / booting / marshalling of Infinispan configurations.
@@ -64,15 +65,15 @@ public class SubsystemParsingTestCase extends ClusteringSubsystemTest {
     @Parameters
     public static Collection<Object[]> data() {
         Object[][] data = new Object[][] {
-            { InfinispanSchema.VERSION_1_0, 33 },
-            { InfinispanSchema.VERSION_1_1, 33 },
-            { InfinispanSchema.VERSION_1_2, 37 },
-            { InfinispanSchema.VERSION_1_3, 37 },
-            { InfinispanSchema.VERSION_1_4, 37 },
-            { InfinispanSchema.VERSION_1_5, 37 },
-            { InfinispanSchema.VERSION_2_0, 42 },
-            { InfinispanSchema.VERSION_3_0, 42 },
-            { InfinispanSchema.VERSION_4_0, 51 },
+            { InfinispanSchema.VERSION_1_0, 35 },
+            { InfinispanSchema.VERSION_1_1, 35 },
+            { InfinispanSchema.VERSION_1_2, 39 },
+            { InfinispanSchema.VERSION_1_3, 39 },
+            { InfinispanSchema.VERSION_1_4, 39 },
+            { InfinispanSchema.VERSION_1_5, 39 },
+            { InfinispanSchema.VERSION_2_0, 44 },
+            { InfinispanSchema.VERSION_3_0, 44 },
+            { InfinispanSchema.VERSION_4_0, 53 },
         };
         return Arrays.asList(data);
     }
@@ -82,6 +83,7 @@ public class SubsystemParsingTestCase extends ClusteringSubsystemTest {
         return new InfinispanSubsystemInitialization()
                 .require(CommonUnaryRequirement.OUTBOUND_SOCKET_BINDING, "hotrod-server-1", "hotrod-server-2")
                 .require(CommonUnaryRequirement.DATA_SOURCE, "ExampleDS")
+                .require(JGroupsRequirement.CHANNEL, "maximal-channel")
                 ;
     }
 
@@ -134,7 +136,7 @@ public class SubsystemParsingTestCase extends ClusteringSubsystemTest {
         if (!this.schema.since(InfinispanSchema.VERSION_1_5)) {
             for (Property containerProp : subsystem.get(CacheContainerResourceDefinition.WILDCARD_PATH.getKey()).asPropertyList()) {
                 Assert.assertTrue("cache-container=" + containerProp.getName(),
-                        containerProp.getValue().get(CacheContainerResourceDefinition.Attribute.STATISTICS_ENABLED.getDefinition().getName()).asBoolean());
+                        containerProp.getValue().get(CacheContainerResourceDefinition.Attribute.STATISTICS_ENABLED.getName()).asBoolean());
 
                 for (String key : containerProp.getValue().keys()) {
                     if (key.endsWith("-cache") && !key.equals("default-cache")) {
@@ -142,7 +144,7 @@ public class SubsystemParsingTestCase extends ClusteringSubsystemTest {
                         if (caches.isDefined()) {
                             for (Property cacheProp : caches.asPropertyList()) {
                                 Assert.assertTrue("cache-container=" + containerProp.getName() + "," + key + "=" + cacheProp.getName(),
-                                        containerProp.getValue().get(CacheResourceDefinition.Attribute.STATISTICS_ENABLED.getDefinition().getName()).asBoolean());
+                                        containerProp.getValue().get(CacheResourceDefinition.Attribute.STATISTICS_ENABLED.getName()).asBoolean());
                             }
                         }
                     }

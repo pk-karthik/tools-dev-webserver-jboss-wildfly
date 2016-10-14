@@ -29,9 +29,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import io.undertow.predicate.Predicates;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.PathHandler;
+import javax.net.ssl.SSLContext;
+
 import org.jboss.as.controller.RunningMode;
 import org.jboss.as.controller.capability.registry.RuntimeCapabilityRegistry;
 import org.jboss.as.controller.extension.ExtensionRegistry;
@@ -45,7 +44,6 @@ import org.jboss.as.network.SocketBinding;
 import org.jboss.as.remoting.HttpListenerRegistryService;
 import org.jboss.as.server.Services;
 import org.jboss.as.server.moduleservice.ServiceModuleLoader;
-import org.jboss.as.subsystem.test.AbstractSubsystemBaseTest;
 import org.jboss.as.subsystem.test.AdditionalInitialization;
 import org.jboss.as.subsystem.test.ControllerInitializer;
 import org.jboss.as.subsystem.test.KernelServices;
@@ -58,10 +56,15 @@ import org.wildfly.extension.io.BufferPoolService;
 import org.wildfly.extension.io.IOServices;
 import org.wildfly.extension.io.WorkerService;
 import org.wildfly.extension.undertow.filters.FilterService;
+import org.wildfly.security.auth.server.HttpAuthenticationFactory;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Pool;
 import org.xnio.XnioWorker;
+
+import io.undertow.predicate.Predicates;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.PathHandler;
 
 /**
  * This is the barebone test example that tests subsystem
@@ -75,12 +78,12 @@ public class UndertowSubsystemTestCase extends AbstractUndertowSubsystemTestCase
 
     @Override
     protected String getSubsystemXml() throws IOException {
-        return readResource("undertow-3.1.xml");
+        return readResource("undertow-4.0.xml");
     }
 
     @Override
     protected String getSubsystemXsdPath() throws Exception {
-        return "schema/wildfly-undertow_3_1.xsd";
+        return "schema/wildfly-undertow_4_0.xsd";
     }
 
     @Override
@@ -95,6 +98,11 @@ public class UndertowSubsystemTestCase extends AbstractUndertowSubsystemTestCase
         properties.put("jboss.server.server.dir", System.getProperty("java.io.tmpdir"));
         properties.put("server.data.dir", System.getProperty("java.io.tmpdir"));
         return properties;
+    }
+
+    @Override
+    protected KernelServices standardSubsystemTest(String configId, boolean compareXml) throws Exception {
+        return super.standardSubsystemTest(configId, false);
     }
 
     @Test
@@ -152,6 +160,8 @@ public class UndertowSubsystemTestCase extends AbstractUndertowSubsystemTestCase
                 capabilities.put(buildDynamicCapabilityName(ListenerResourceDefinition.SOCKET_CAPABILITY, entry),
                         SocketBinding.class);
             }
+            capabilities.put(buildDynamicCapabilityName("org.wildfly.security.http-authentication-factory", "elytron-factory"), HttpAuthenticationFactory.class);
+            capabilities.put(buildDynamicCapabilityName("org.wildfly.security.ssl-context", "TestContext"), SSLContext.class);
             registerServiceCapabilities(capabilityRegistry, capabilities);
 
         }

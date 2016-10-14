@@ -35,6 +35,7 @@ public enum EJB3SubsystemXMLElement {
     UNKNOWN(null),
 
     ASYNC("async"),
+    ALLOW_EJB_NAME_REGEX("allow-ejb-name-regex"),
 
     BEAN_INSTANCE_POOLS("bean-instance-pools"),
     BEAN_INSTANCE_POOL_REF("bean-instance-pool-ref"),
@@ -93,6 +94,11 @@ public enum EJB3SubsystemXMLElement {
     LOG_SYSTEM_EXCEPTIONS(EJB3SubsystemModel.LOG_SYSTEM_EXCEPTIONS),
     DELIVERY_GROUPS("delivery-groups"),
     DELIVERY_GROUP("delivery-group"),
+
+    // Elytron integration
+    APPLICATION_SECURITY_DOMAIN("application-security-domain"),
+    APPLICATION_SECURITY_DOMAINS("application-security-domains"),
+    IDENTITY("identity")
     ;
 
     private final String name;

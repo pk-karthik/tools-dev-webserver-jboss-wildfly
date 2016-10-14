@@ -35,6 +35,8 @@ public interface EJB3SubsystemModel {
     String ALIASES = "aliases";
 
     String ASYNC = "async";
+    String ALLOW_EJB_NAME_REGEX = "allow-ejb-name-regex";
+
     String IIOP = "iiop";
 
     String CONNECTOR_REF = "connector-ref";
@@ -137,4 +139,13 @@ public interface EJB3SubsystemModel {
 
     ServiceName BASE_THREAD_POOL_SERVICE_NAME = ThreadsServices.EXECUTOR.append("ejb3");
     String EXECUTE_IN_WORKER = "execute-in-worker";
+
+    // Elytron integration
+    String APPLICATION_SECURITY_DOMAIN = "application-security-domain";
+    String IDENTITY = "identity";
+    String OUTFLOW_SECURITY_DOMAINS = "outflow-security-domains";
+    String REFERENCING_DEPLOYMENTS = "referencing-deployments";
+    String SECURITY_DOMAIN = "security-domain";
+
+    PathElement IDENTITY_PATH = PathElement.pathElement(SERVICE, IDENTITY);
 }

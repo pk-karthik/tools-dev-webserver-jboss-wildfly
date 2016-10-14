@@ -25,7 +25,12 @@ package org.jboss.as.test.clustering.extended.ejb2.stateful.passivation;
 import java.net.URL;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.arquillian.container.test.api.*;
+import org.jboss.arquillian.container.test.api.ContainerController;
+import org.jboss.arquillian.container.test.api.Deployer;
+import org.jboss.arquillian.container.test.api.Deployment;
+import org.jboss.arquillian.container.test.api.OperateOnDeployment;
+import org.jboss.arquillian.container.test.api.RunAsClient;
+import org.jboss.arquillian.container.test.api.TargetsContainer;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.arquillian.junit.InSequence;
 import org.jboss.arquillian.test.api.ArquillianResource;
@@ -38,7 +43,6 @@ import org.jboss.logging.Logger;
 import org.jboss.shrinkwrap.api.Archive;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -103,7 +107,7 @@ public class ClusterPassivationTestCase extends ClusterPassivationTestBase {
     }
 
     /**
-     * Associtation of node names to deployment,container names and client context
+     * Association of node names to deployment,container names and client context
      */
     @Test
     @InSequence(-1)
@@ -124,7 +128,6 @@ public class ClusterPassivationTestCase extends ClusterPassivationTestBase {
         log.info("URL2 nodename: " + nodeName2);
     }
 
-    @Ignore("JBPAPP-8774")
     @Test
     @InSequence(1)
     public void testPassivationBeanAnnotated(

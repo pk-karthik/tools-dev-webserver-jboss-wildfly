@@ -26,10 +26,12 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import javax.xml.stream.XMLStreamException;
 
+import org.jboss.as.clustering.controller.CommonRequirement;
 import org.jboss.as.clustering.controller.CommonUnaryRequirement;
 import org.jboss.as.clustering.controller.Operations;
 import org.jboss.as.clustering.subsystem.AdditionalInitialization;
@@ -62,7 +64,7 @@ public class SubsystemParsingTestCase extends ClusteringSubsystemTest {
     private final JGroupsSchema schema;
 
     public SubsystemParsingTestCase(JGroupsSchema schema, int expectedOperationCount) {
-        super(JGroupsExtension.SUBSYSTEM_NAME, new JGroupsExtension(), String.format("subsystem-jgroups-%d_%d.xml", schema.major(), schema.minor()));
+        super(JGroupsExtension.SUBSYSTEM_NAME, new JGroupsExtension(), String.format(Locale.ROOT, "subsystem-jgroups-%d_%d.xml", schema.major(), schema.minor()));
         this.expectedOperationCount = expectedOperationCount;
         this.schema = schema;
     }
@@ -72,8 +74,9 @@ public class SubsystemParsingTestCase extends ClusteringSubsystemTest {
         Object[][] data = new Object[][] {
                 { JGroupsSchema.VERSION_1_1, 20 },
                 { JGroupsSchema.VERSION_2_0, 22 },
-                { JGroupsSchema.VERSION_3_0, 29 },
-                { JGroupsSchema.VERSION_4_0, 29 },
+                { JGroupsSchema.VERSION_3_0, 30 },
+                { JGroupsSchema.VERSION_4_0, 30 },
+                { JGroupsSchema.VERSION_4_1, 31 },
         };
         return Arrays.asList(data);
     }
@@ -96,7 +99,10 @@ public class SubsystemParsingTestCase extends ClusteringSubsystemTest {
 
     @Override
     protected AdditionalInitialization createAdditionalInitialization() {
-        return new AdditionalInitialization().require(CommonUnaryRequirement.SOCKET_BINDING, "jgroups-udp", "some-binding", "jgroups-diagnostics", "jgroups-mping", "jgroups-tcp-fd", "jgroups-state-xfr");
+        return new AdditionalInitialization()
+                .require(CommonUnaryRequirement.SOCKET_BINDING, "jgroups-udp", "some-binding", "jgroups-diagnostics", "jgroups-mping", "jgroups-tcp-fd", "jgroups-state-xfr")
+                .require(CommonRequirement.MBEAN_SERVER)
+                ;
     }
 
     /**
@@ -235,8 +241,6 @@ public class SubsystemParsingTestCase extends ClusteringSubsystemTest {
      * the work being done for WFCORE-401. This work involves calculating the operations to bring the slave domain model
      * into sync with the master domain model. Without ordered resources, that would mean on reconnect if the master
      * had added a protocol somewhere in the middle, the protocol would get added to the end rather at the correct place.
-     *
-     * @throws Exception
      */
     @Test
     public void testIndexedAdds() throws Exception {

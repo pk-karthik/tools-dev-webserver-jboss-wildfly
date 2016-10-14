@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.wildfly</groupId>
         <artifactId>wildfly-clustering-jgroups</artifactId>
-        <version>10.1.0.Final-SNAPSHOT</version>
+        <version>11.0.0.Alpha1-SNAPSHOT</version>
     </parent>
 
     <artifactId>wildfly-clustering-jgroups-extension</artifactId>
@@ -98,6 +98,10 @@
         <dependency>
             <groupId>org.wildfly</groupId>
             <artifactId>wildfly-clustering-jgroups-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wildfly</groupId>
+            <artifactId>wildfly-connector</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wildfly.core</groupId>

@@ -33,6 +33,7 @@ import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.PathElement;
+import org.jboss.as.controller.capability.CapabilityServiceSupport;
 import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
 import org.jboss.as.controller.registry.Resource;
 import org.jboss.as.ejb3.logging.EjbLogger;
@@ -53,8 +54,6 @@ import org.jboss.as.txn.service.TxnServices;
 import org.jboss.as.txn.service.UserTransactionService;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.Property;
-import org.jboss.modules.Module;
-import org.jboss.modules.ModuleIdentifier;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
@@ -62,7 +61,6 @@ import org.jboss.msc.service.ServiceTarget;
 import org.jboss.remoting3.Endpoint;
 import org.jboss.remoting3.RemotingOptions;
 import org.wildfly.clustering.service.Builder;
-import org.wildfly.clustering.service.SubGroupServiceNameFactory;
 import org.wildfly.clustering.spi.CacheGroupBuilderProvider;
 import org.wildfly.clustering.spi.GroupBuilderProvider;
 import org.wildfly.clustering.spi.LocalCacheGroupBuilderProvider;
@@ -125,14 +123,14 @@ public class EJB3RemoteServiceAdd extends AbstractAddStepHandler {
         PathElement infinispanPath = PathElement.pathElement(ModelDescriptionConstants.SUBSYSTEM, "infinispan");
         if (!rootResource.hasChild(infinispanPath) || !rootResource.getChild(infinispanPath).hasChild(PathElement.pathElement("cache-container", clientMappingsClusterName))) {
             // Install services that would normally be installed by this container/cache
-            ModuleIdentifier module = Module.forClass(this.getClass()).getIdentifier();
+            CapabilityServiceSupport support = context.getCapabilityServiceSupport();
             for (GroupBuilderProvider provider : ServiceLoader.load(LocalGroupBuilderProvider.class, LocalGroupBuilderProvider.class.getClassLoader())) {
-                for (Builder<?> builder : provider.getBuilders(clientMappingsClusterName, module)) {
+                for (Builder<?> builder : provider.getBuilders(context.getCapabilityServiceSupport(), clientMappingsClusterName)) {
                     builder.build(target).install();
                 }
             }
             for (CacheGroupBuilderProvider provider : ServiceLoader.load(LocalCacheGroupBuilderProvider.class, LocalCacheGroupBuilderProvider.class.getClassLoader())) {
-                for (Builder<?> builder : provider.getBuilders(clientMappingsClusterName, SubGroupServiceNameFactory.DEFAULT_SUB_GROUP)) {
+                for (Builder<?> builder : provider.getBuilders(support, clientMappingsClusterName, null)) {
                     builder.build(target).install();
                 }
             }

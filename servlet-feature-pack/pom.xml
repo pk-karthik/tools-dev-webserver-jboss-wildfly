@@ -30,7 +30,7 @@
     <parent>
         <groupId>org.wildfly</groupId>
         <artifactId>wildfly-parent</artifactId>
-        <version>10.1.0.Final-SNAPSHOT</version>
+        <version>11.0.0.Alpha1-SNAPSHOT</version>
     </parent>
 
     <artifactId>wildfly-servlet-feature-pack</artifactId>
@@ -139,7 +139,6 @@
             <groupId>org.jboss.common</groupId>
             <artifactId>jboss-common-beans</artifactId>
         </dependency>
-
 
         <dependency>
             <groupId>org.jboss.spec.javax.annotation</groupId>
@@ -365,6 +364,11 @@
                     <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.wildfly.security</groupId>
+            <artifactId>elytron-subsystem</artifactId>
         </dependency>
 
         <dependency>

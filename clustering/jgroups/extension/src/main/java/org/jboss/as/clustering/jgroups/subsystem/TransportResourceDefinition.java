@@ -110,8 +110,7 @@ public class TransportResourceDefinition extends ProtocolResourceDefinition {
 
         @Override
         public RuntimeCapability<Void> resolve(PathAddress address) {
-            PathAddress stackAddress = address.getParent();
-            return this.definition.fromBaseCapability(stackAddress.getLastElement().getValue() + "." + address.getLastElement().getValue());
+            return this.definition.fromBaseCapability(address.getParent().getLastElement().getValue() + "." + address.getLastElement().getValue());
         }
     }
 
@@ -174,7 +173,6 @@ public class TransportResourceDefinition extends ProtocolResourceDefinition {
         }
     }
 
-    @SuppressWarnings("deprecation")
     static void buildTransformation(ModelVersion version, ResourceTransformationDescriptionBuilder parent) {
         ResourceTransformationDescriptionBuilder builder = parent.addChildResource(WILDCARD_PATH);
 
@@ -221,8 +219,6 @@ public class TransportResourceDefinition extends ProtocolResourceDefinition {
         } else {
             EnumSet.allOf(ThreadPoolResourceDefinition.class).forEach(p -> p.buildTransformation(version, parent));
         }
-
-        PropertyResourceDefinition.buildTransformation(version, builder);
     }
 
     // Transform /subsystem=jgroups/stack=*/transport=* -> /subsystem=jgroups/stack=*/transport=TRANSPORT
@@ -295,7 +291,7 @@ public class TransportResourceDefinition extends ProtocolResourceDefinition {
                 .addCapabilities(ProtocolResourceDefinition.Capability.class)
                 .addRequiredChildren(ThreadPoolResourceDefinition.class)
                 ;
-        ResourceServiceHandler handler = new ParentResourceServiceHandler<>(new TransportConfigurationBuilderFactory());
+        ResourceServiceHandler handler = new ParentResourceServiceHandler<>(address -> new TransportConfigurationBuilder(address));
         new RestartParentResourceAddStepHandler<ChannelFactory>(this.parentBuilderFactory, descriptor, handler) {
             @Override
             protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
@@ -321,7 +317,7 @@ public class TransportResourceDefinition extends ProtocolResourceDefinition {
                         // TODO doesn't cover the admin-only modes
                         if (context.getProcessType().isServer()) {
                             for (ThreadingAttribute attribute : EnumSet.allOf(ThreadingAttribute.class)) {
-                                if (conf.hasDefined(attribute.getDefinition().getName())) {
+                                if (conf.hasDefined(attribute.getName())) {
                                     // That is not supported.
                                     throw new OperationFailedException(JGroupsLogger.ROOT_LOGGER.threadsAttributesUsedInRuntime());
                                 }

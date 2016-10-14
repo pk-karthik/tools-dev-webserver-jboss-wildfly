@@ -50,8 +50,8 @@ import org.jboss.as.subsystem.test.AbstractSubsystemTest;
 import org.jboss.as.subsystem.test.AdditionalInitialization;
 import org.jboss.as.subsystem.test.KernelServices;
 import org.jboss.dmr.ModelNode;
-import org.junit.Assert;
 import org.junit.Test;
+import org.wildfly.clustering.jgroups.spi.JGroupsDefaultRequirement;
 
 /**
  *
@@ -222,6 +222,7 @@ public class MigrateTestCase extends AbstractSubsystemTest {
                             rootRegistration, ExtensionRegistryType.SERVER));
                 }
             }, null));
+            registerCapabilities(capabilityRegistry, JGroupsDefaultRequirement.CHANNEL_FACTORY.getName());
         }
 
         @Override

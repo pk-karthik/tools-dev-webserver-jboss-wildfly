@@ -57,7 +57,10 @@ public class OperationTestCaseBase extends AbstractSubsystemTest {
     }
 
     AdditionalInitialization createAdditionalInitialization() {
-        return new JGroupsSubsystemInitialization().require(CommonUnaryRequirement.OUTBOUND_SOCKET_BINDING, "hotrod-server-1", "hotrod-server-2");
+        return new JGroupsSubsystemInitialization()
+                .require(CommonUnaryRequirement.OUTBOUND_SOCKET_BINDING, "hotrod-server-1", "hotrod-server-2")
+                .require(CommonUnaryRequirement.DATA_SOURCE, "ExampleDS", "new-datasource")
+                ;
     }
 
     // cache container access
@@ -133,7 +136,7 @@ public class OperationTestCaseBase extends AbstractSubsystemTest {
     }
 
     protected static ModelNode getCacheStoreUndefinePropertiesOperation(PathAddress cacheStoreAddress) {
-        return Util.getUndefineAttributeOperation(cacheStoreAddress, StoreResourceDefinition.Attribute.PROPERTIES.getDefinition().getName());
+        return Util.getUndefineAttributeOperation(cacheStoreAddress, StoreResourceDefinition.Attribute.PROPERTIES.getName());
     }
 
     protected static ModelNode getCacheStorePropertyAddOperation(String containerName, String cacheName, String cacheType, String propertyName, String value) {

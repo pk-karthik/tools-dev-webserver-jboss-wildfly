@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.wildfly</groupId>
         <artifactId>wildfly-testsuite</artifactId>
-        <version>10.1.0.Final-SNAPSHOT</version>
+        <version>11.0.0.Alpha1-SNAPSHOT</version>
     </parent>
 
     <artifactId>wildfly-ts-integ</artifactId>
@@ -30,6 +30,7 @@
             -Djbossas.ts.dir=${jbossas.ts.dir}
             -Djbossas.project.dir=${jbossas.project.dir}
             -Djboss.dist=${jboss.dist}
+            -Djava.io.tmpdir=${basedir}/target
         </jvm.args.dirs>
 
         <!-- Used to provide an absolute location for the distribution under test. -->
